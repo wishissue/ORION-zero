@@ -17,19 +17,3 @@
 - **Removed:** the Dev tab (developer profile, coin, leaderboard, Fuel the Code), Unity Ads, profile cards and badges, custom bundles and app submissions, Orion AI and its on-device model support, the Dino game, pixel pull-to-refresh characters, 13 of 14 color palettes, the in-app guide and tour, hidden developer options, and the legacy React/Capacitor app.
 - **Kept:** the catalog and search, app detail pages, My Apps and updates, background auto-update, installers (system, Shizuku, root, wireless ADB), Guardian and Sentinel, VirusTotal checks, backup and restore, and theming settings.
 
-## Build
-
-```
-./gradlew :app:assembleDebug
-./gradlew :app:testDebugUnitTest
-```
-
-Requires JDK 21 and the Android SDK (compileSdk 37). For a signed release, add `keystore.properties` as described in `app/build.gradle.kts`.
-
-## Before you publish your own build
-
-1. Change `applicationId` (and `namespace` if you like) in `app/build.gradle.kts`, otherwise it replaces the original app on a device.
-2. Point the data and config URLs in `app/src/main/java/com/orion/store/data/Models.kt` (`Defaults`) at your own catalog repo.
-3. Sign it with your own key.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for how the app is laid out.
