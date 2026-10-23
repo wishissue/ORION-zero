@@ -22,6 +22,7 @@ import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,7 +77,7 @@ fun StoreTab(vm: MainViewModel, platform: String, contentPadding: PaddingValues)
     val ptr = rememberPullToRefreshState()
     Box(Modifier.fillMaxSize()) {
         PullToRefreshBox(vm.refreshing, vm::reload, Modifier.fillMaxSize(), state = ptr,
-            indicator = { PtrIndicator(ptr, vm.refreshing, s.pullToRefreshCharacter, Modifier.align(Alignment.TopCenter)) }) {
+            indicator = { PullToRefreshDefaults.Indicator(state = ptr, isRefreshing = vm.refreshing, modifier = Modifier.align(Alignment.TopCenter)) }) {
             LazyVerticalGrid(GridCells.Adaptive(if (s.compactMode) 78.dp else 100.dp), Modifier.fillMaxSize(), grid, contentPadding,
                 horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 item("header", span = full) { Header(vm) }
@@ -159,10 +160,6 @@ private fun Filters(vm: MainViewModel, ts: TabViewState, cats: List<String>, cou
             }
             // TV remotes cannot pull to refresh, so the button shows on modern too
             if (!modern || Device.isTv) IconButton(vm::reload, enabled = !vm.refreshing) { if (vm.refreshing) LoadingIndicator(Modifier.size(24.dp)) else Icon(Sym.Refresh, "Refresh") }
-            vm.submissionCooldown?.let { AssistChip({}, { Text(it) }, leadingIcon = { Icon(Sym.Schedule, null, Modifier.size(16.dp)) }, enabled = false) }
-                ?: TextButton({ vm.open(Overlay.SUBMISSION) }, shapes = ButtonDefaults.shapes()) {
-                    Icon(Sym.AddCircleOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Submit app")
-                }
         }
     }
 }
@@ -538,20 +535,6 @@ private fun Bundles(vm: MainViewModel, c: StoreCollection, modifier: Modifier) =
                 }
                 Text(b.title, Modifier.padding(start = 6.dp, end = 6.dp, top = 10.dp), style = MaterialTheme.typography.titleSmallEmphasized, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text("$count apps", Modifier.padding(horizontal = 6.dp), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-            }
-        }
-        item("create") {
-            val line = cs.outline
-            Column(Modifier.width(164.dp).springClick(RoundedCornerShape(28.dp)) { vm.open(Overlay.CUSTOM_BUNDLE) }.padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 12.dp)) {
-                Box(Modifier.size(156.dp).drawBehind {
-                    drawRoundRect(line, cornerRadius = CornerRadius(40.dp.toPx()), style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 12f))))
-                }, contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(56.dp).clip(MaterialShapes.Cookie6Sided.toShape()).background(cs.primaryContainer), contentAlignment = Alignment.Center) {
-                        Icon(Sym.Add, null, tint = cs.onPrimaryContainer)
-                    }
-                }
-                Text("Create bundle", Modifier.padding(start = 6.dp, top = 10.dp), style = MaterialTheme.typography.titleSmallEmphasized)
-                Text("Pick your own apps", Modifier.padding(horizontal = 6.dp), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             }
         }
     }

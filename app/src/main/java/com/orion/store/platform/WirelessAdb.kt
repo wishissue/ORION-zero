@@ -83,7 +83,7 @@ object WirelessAdb {
                 crt = cf.inputStream().use { CertificateFactory.getInstance("X.509").generateCertificate(it) }
             } else {
                 val kp = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
-                val name = X500Name("CN=Orion Store"); val now = System.currentTimeMillis()
+                val name = X500Name("CN=Orion Zero"); val now = System.currentTimeMillis()
                 crt = JcaX509CertificateConverter().getCertificate(
                     JcaX509v3CertificateBuilder(name, BigInteger.valueOf(now), Date(now), Date(now + 3650L * 86_400_000), name, kp.public)
                         .build(JcaContentSignerBuilder("SHA256withRSA").build(kp.private)))
@@ -93,7 +93,7 @@ object WirelessAdb {
         }
         override fun getPrivateKey() = pk
         override fun getCertificate() = crt
-        override fun getDeviceName() = "Orion Store"
+        override fun getDeviceName() = "Orion Zero"
     }
 
     @Volatile private var m: Manager? = null

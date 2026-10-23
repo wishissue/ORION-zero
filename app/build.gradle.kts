@@ -20,6 +20,14 @@ android {
         // Phones and TVs are ARM; the x86 builds of the native libraries only served emulators
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
+        }
+    }
     signingConfigs {
         if (keystore != null) create("release") {
             storeFile = rootProject.file(keystore.getProperty("storeFile"))
@@ -45,8 +53,6 @@ android {
         // Orion ships as a GitHub download, so the download size wins over install-time extraction of the .so files
         jniLibs.useLegacyPackaging = true
         // BouncyCastle data for algorithms Orion never touches (post-quantum Picnic tables, PKIX reviewer messages)
-        // The on-device AI engine (about 10 MB) downloads the first time someone picks an on-device model, so it never ships in the APK
-        jniLibs.excludes += listOf("lib/arm64-v8a/liblitertlm_jni.so", "lib/x86_64/liblitertlm_jni.so")
         resources.excludes += listOf("org/bouncycastle/pqc/**", "org/bouncycastle/x509/CertPathReviewerMessages*", "org/bouncycastle/pkix/CertPathReviewerMessages*")
     }
     testOptions.unitTests.isIncludeAndroidResources = true
@@ -73,27 +79,14 @@ dependencies {
     implementation("com.github.MuntashirAkon:libadb-android:3.1.1")
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.81")
     implementation("org.conscrypt:conscrypt-android:2.7.0")
-    implementation("com.unity3d.ads:unity-ads:4.21.0")
-    // Orion AI on-device models (LiteRT-LM)
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.1")
-    implementation("androidx.fragment:fragment:1.8.9") // unity-ads drags in fragment 1.0.0, which breaks ActivityResult APIs
     testImplementation("junit:junit:4.13.2")
-    // Screenshot harness (ShotsTest): ./gradlew :app:testDebugUnitTest --tests "*ShotsTest*" -Pshots
-    testImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    testImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("org.robolectric:robolectric:4.17")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.76.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.76.0")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }
 
 // conscrypt-android's JNI only exists on devices; under Robolectric it shadows the JVM Conscrypt Robolectric ships and every test fails to boot
 configurations.configureEach { if (name.endsWith("UnitTestRuntimeClasspath")) exclude(group = "org.conscrypt", module = "conscrypt-android") }
-
-tasks.withType<Test>().configureEach {
-    systemProperty("roborazzi.test.record", "true")
-    systemProperty("orion.shots", providers.gradleProperty("shots").getOrElse(""))
-}
 
 kotlin {
     compilerOptions {
@@ -105,5 +98,33 @@ kotlin {
             "androidx.compose.animation.ExperimentalSharedTransitionApi",
             "kotlinx.coroutines.ExperimentalCoroutinesApi",
         )
+    }
+}
+
+tasks.register("copyApksToOutput") {
+    mustRunAfter(tasks.matching { it.name.startsWith("package") || it.name.startsWith("assemble") })
+    val apkDir = layout.buildDirectory.dir("outputs/apk")
+    val outputDir = rootProject.layout.projectDirectory.dir("output")
+    val outputDirTypo = rootProject.layout.projectDirectory.dir("outupt")
+
+    inputs.dir(apkDir)
+    outputs.dir(outputDir)
+    outputs.dir(outputDirTypo)
+
+    doLast {
+        val outDir = outputDir.asFile.apply { mkdirs() }
+        val outDirTypo = outputDirTypo.asFile.apply { mkdirs() }
+        apkDir.get().asFileTree.matching {
+            include("**/*.apk")
+        }.forEach { apkFile ->
+            val targetName = when {
+                apkFile.name.contains("arm64-v8a") -> "orion-zero-arm64-v8a.apk"
+                apkFile.name.contains("armeabi-v7a") -> "orion-zero-armeabi-v7a.apk"
+                apkFile.name.contains("universal") -> "orion-zero-universal.apk"
+                else -> apkFile.name
+            }
+            apkFile.copyTo(File(outDir, targetName), overwrite = true)
+            apkFile.copyTo(File(outDirTypo, targetName), overwrite = true)
+        }
     }
 }

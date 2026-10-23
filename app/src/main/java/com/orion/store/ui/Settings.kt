@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.RoundedPolygon
 import com.orion.store.data.*
 import com.orion.store.platform.Installer
-import com.orion.store.platform.OrionAi
 import com.orion.store.platform.WirelessAdb
 import com.orion.store.platform.ResultHost
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +106,7 @@ fun identityExport(s: Settings, favorites: List<String>, now: Long): String {
         put("theme", s.theme); put("palette", s.palette); put("appFont", s.appFont); put("customFonts", json.encodeToJsonElement(s.customFonts)); put("customPalettes", json.encodeToJsonElement(s.customPalettes)); put("storeLayout", s.storeLayout)
         put("isOled", s.isOled); put("hiddenTabs", json.encodeToJsonElement(s.hiddenTabs)); put("disableAnimations", s.disableAnimations)
         put("compactMode", s.compactMode); put("showAppAbout", s.showAppAbout); put("bottomNavScale", jsNum(s.bottomNavScale)); put("highRefreshRate", s.highRefreshRate)
-        put("pullToRefreshCharacter", s.pullToRefreshCharacter); put("hapticEnabled", s.hapticEnabled); put("glassEffect", s.glassEffect)
+        put("hapticEnabled", s.hapticEnabled); put("glassEffect", s.glassEffect)
         put("quickTiles", s.quickTiles?.let { json.encodeToJsonElement(it) } ?: JsonNull); put("settingsOrder", json.encodeToJsonElement(s.settingsOrder))
         put("autoUpdateEnabled", s.autoUpdateEnabled); put("wifiOnly", s.wifiOnly); put("stableOnly", s.stableOnly); put("deleteApk", s.deleteApk); put("useShizuku", s.useShizuku)
         put("installerPreference", s.installerPreference); put("installerPackage", s.installerPackage); put("installerLabel", s.installerLabel)
@@ -154,7 +153,7 @@ fun mergeIdentity(d: JsonObject, c: Settings): Settings =
         storeLayout = d.or("storeLayout", c.storeLayout), isOled = d.or("isOled", c.isOled), hiddenTabs = d.or("hiddenTabs", c.hiddenTabs),
         disableAnimations = d.or("disableAnimations", c.disableAnimations), compactMode = d.or("compactMode", c.compactMode), showAppAbout = d.or("showAppAbout", c.showAppAbout),
         bottomNavScale = d.or("bottomNavScale", c.bottomNavScale).takeIf { it.isFinite() } ?: c.bottomNavScale,
-        highRefreshRate = d.or("highRefreshRate", c.highRefreshRate), pullToRefreshCharacter = d.or("pullToRefreshCharacter", c.pullToRefreshCharacter),
+        highRefreshRate = d.or("highRefreshRate", c.highRefreshRate),
         hapticEnabled = d.or("hapticEnabled", c.hapticEnabled), glassEffect = d.or("glassEffect", c.glassEffect),
         quickTiles = d.or("quickTiles", c.quickTiles), settingsOrder = d.or("settingsOrder", c.settingsOrder),
         autoUpdateEnabled = d.or("autoUpdateEnabled", c.autoUpdateEnabled), wifiOnly = d.or("wifiOnly", c.wifiOnly), stableOnly = d.or("stableOnly", c.stableOnly), deleteApk = d.or("deleteApk", c.deleteApk),
@@ -215,7 +214,6 @@ private val CATS = listOf(
     Cat("installer", Sym.Shield, Green, "Orion Xtra", "Guardian, Sentinel and installer", MaterialShapes.Gem),
     Cat("identity", Sym.Backup, Pink, "Backup", "Save or restore your identity", MaterialShapes.Cookie6Sided),
     Cat("interface", Sym.ViewQuilt, Teal, "Interface", "Store layout and visible tabs", MaterialShapes.Pentagon),
-    Cat("developer", Sym.Terminal, Yellow, "Developer", "Debug switches and tools", MaterialShapes.SoftBurst),
 )
 
 @Composable
@@ -406,15 +404,6 @@ fun SettingsScreen(vm: MainViewModel) {
                             FeatureTile(Sym.Shield, "Guardian", "Permissions, APK export, debloat", Green, MaterialShapes.Cookie9Sided, Modifier.weight(1f)) { modal = "guardian" }
                             FeatureTile(Sym.MonitorHeart, "Sentinel", "Malware scan for installed apps", Blue, MaterialShapes.Sunny, Modifier.weight(1f)) { modal = "sentinel" }
                         }
-                        val ch = ptr(s.pullToRefreshCharacter)
-                        Section("Pull to refresh") {
-                            SRow(Sym.AutoFixHigh, "Refresh character", ch.name, onClick = { picker = "ptr" }) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    PtrBadge(ch, 48.dp)
-                                    Chevron()
-                                }
-                            }
-                        }
                         Section("Install behavior") {
                             SRow(Sym.Android, "APK installer", when (s.installerPreference) {
                                 "package" -> s.installerLabel.ifEmpty { "Specific Installer" }; "chooser" -> "Ask Every Time"; else -> "System Installer"
@@ -529,35 +518,12 @@ fun SettingsScreen(vm: MainViewModel) {
                                 }
                             }
                         }
-                        Section("Orion AI") {
-                            Toggle(Sym.AutoAwesome, "AI star", "A small star you can drag anywhere, tap it to open Orion AI", s.aiButton) { vm.set { it.copy(aiButton = !it.aiButton) } }
-                            Toggle(Sym.Notifications, "AI sound effects", "Little chimes when you chat with Orion AI", s.aiSounds) { vm.set { it.copy(aiSounds = !it.aiSounds) } }
-                            SRow(Sym.Key, "Provider and key", OrionAi.provider(s.aiProvider).label + if (vm.ai.ready(s)) " · connected" else " · not connected",
-                                onClick = { modal = "ai" }) { Chevron() }
-                            SRow(Sym.Chat, "Open Orion AI", "Find apps by describing what you need", onClick = { vm.close(Overlay.SETTINGS); vm.open(Overlay.AI) }) { Chevron() }
-                        }
-                    }
-                    "developer" -> {
-                        Section("Testing and debug") {
-                            InfoCard("These options are for testing and modifying core app behavior. They may cause instability.", icon = Sym.Warning)
-                            Toggle(Sym.Storage, "Enable built-in data", "Load packaged data instead of remote sources", s.loadLocalData) { vm.set { it.copy(loadLocalData = !it.loadLocalData) } }
-                            Toggle(Sym.Construction, "Local maintenance mode", "Work on bundles and data locally", s.localMaintenanceMode) {
-                                vm.set { it.copy(localMaintenanceMode = !it.localMaintenanceMode) }
-                            }
-                            SRow(Sym.Radar, "Run catalog scanner (Admin)", "Check every app for missing text and dead links", onClick = { modal = "scanner" }) { Chevron() }
-                            SRow(Sym.DeleteSweep, "Clear system cache", "Reset pending cleanup and ready installs", onClick = {
-                                vm.upd { it.copy(pendingCleanup = emptyMap(), readyToInstall = emptyMap()) }; vm.haptic(H.WARNING)
-                            })
-                        }
-                        DevConfigEditor(vm, s)
-                        DevTools(vm)
                     }
                 }
             }
         }
     }
     when (picker) {
-        "ptr" -> PtrPickerSheet(s.pullToRefreshCharacter, { c -> vm.set { it.withPtrCharacter(c) }; picker = null }) { picker = null }
         "font" -> FontSheet(vm, s, fontError, importingFont, onImport = {
             scope.launch {
                 fontError = null
@@ -587,7 +553,6 @@ fun SettingsScreen(vm: MainViewModel) {
     }
     when (modal) {
         "guardian" -> GuardianSheet(vm) { modal = "none" }
-        "ai" -> AiSettingsSheet(vm) { modal = "none" }
         "sentinel" -> SentinelSheet(vm) { modal = "none" }
         "scanner" -> ScannerSheet(all) { modal = "none" }
     }
@@ -604,8 +569,7 @@ private val TIPS = mapOf(
     "storage" to "The janitor clears leftover APKs a week after install, or on the next launch with Delete APK on.",
     "installer" to "With Shizuku, installs and updates go through without a confirmation prompt each time.",
     "identity" to "Your backup is a single small .osf file. Keep a copy in your cloud drive and restore it on any phone.",
-    "interface" to "Hidden tabs come back from here at any time. The Dev tab always stays.",
-    "developer" to "Close developer options from the bottom of this page when you are done.",
+    "interface" to "Hidden tabs come back from here at any time.",
 )
 
 @Composable
@@ -629,7 +593,7 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
     Column(Modifier.fillMaxSize().background(cs.surface).verticalScroll(rememberScrollState()).readableWidth().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(bottom = 32.dp)) {
         Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
             Text("Settings", style = MaterialTheme.typography.displaySmallEmphasized)
-            Text("Orion Store v$STORE_VERSION · ${vm.allApps().size} apps in catalog", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            Text("Orion Zero v$STORE_VERSION · ${vm.allApps().size} apps in catalog", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
         var editing by remember { mutableStateOf(false) }
         HubHeader("Quick toggles") { IconButton({ editing = true }) { Icon(Sym.Edit, "Edit quick toggles", tint = cs.primary) } }
@@ -718,7 +682,6 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
                 Slot(5, Modifier.weight(1f).fillMaxHeight(), compact = true)
                 Slot(6, Modifier.weight(1f).fillMaxHeight(), compact = true)
             }
-            if (s.isDevUnlocked) Bento(vm, cat("developer"), shared, Modifier.fillMaxWidth().height(108.dp))
         }
     }
 }
@@ -751,8 +714,6 @@ private val QUICK = listOf(
     Quick("noMotion", Sym.MotionPhotosOff, "No animations", { it.disableAnimations }) { it.copy(disableAnimations = !it.disableAnimations) },
     Quick("glass", Sym.BlurOn, "Glass dock", { it.glassEffect }) { it.copy(glassEffect = !it.glassEffect) },
     Quick("updateLock", Sym.Lock, "Update lock", { it.updateLock }, { it.rootMode && android.os.Build.VERSION.SDK_INT >= 34 }) { it.copy(updateLock = !it.updateLock) },
-    Quick("localData", Sym.Storage, "Built-in data", { it.loadLocalData }, { it.isDevUnlocked }) { it.copy(loadLocalData = !it.loadLocalData) },
-    Quick("maintenance", Sym.Construction, "Maintenance", { it.localMaintenanceMode }, { it.isDevUnlocked }) { it.copy(localMaintenanceMode = !it.localMaintenanceMode) },
 )
 private val DEFAULT_QUICK = listOf("autoUpdate", "wifiOnly", "haptics", "materialYou", "smooth", "compact")
 
@@ -1125,30 +1086,7 @@ private fun DockSize(vm: MainViewModel, s: Settings) = Section("Dock size") {
 private fun fontLabel(s: Settings) = if (s.appFont.startsWith("custom:")) s.customFonts.firstOrNull { "custom:${it.id}" == s.appFont }?.name ?: "Custom Font"
     else Defaults.FONTS.firstOrNull { it.first == s.appFont }?.second ?: "Space Grotesk"
 
-@Composable
-private fun DevConfigEditor(vm: MainViewModel, s: Settings) = Section("Developer Config Source") {
-    val url = s.devConfigUrl.trim(); val loading = vm.devStatus == "loading"
-    Toggle(Sym.Science, "Enable Dev Config", "Load an isolated config.json URL instead of the production config", s.devConfigEnabled) {
-        vm.set { it.copy(devConfigEnabled = !it.devConfigEnabled) }
-    }
-    Column(Modifier.clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(s.devConfigUrl, { v -> vm.set { it.copy(devConfigUrl = v) } }, Modifier.fillMaxWidth(), label = { Text("Dev config URL") },
-            placeholder = { Text("https://example.com/config.json") }, singleLine = true, shape = RoundedCornerShape(16.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(vm::reload, modifier = Modifier.weight(1f), enabled = s.devConfigEnabled && url.isNotEmpty() && !loading, shapes = ButtonDefaults.shapes()) {
-                Text(if (loading) "Reloading..." else "Reload Dev Config")
-            }
-            OutlinedButton({ vm.set { it.copy(devConfigEnabled = false, devConfigUrl = "") }; vm.devStatus = "idle"; vm.devError = null; vm.reload() }, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
-                Text("Disable and Clear")
-            }
-        }
-        Text(if (s.devConfigEnabled) "Status: ${when (vm.devStatus) { "loading" -> "loading"; "loaded" -> "loaded"; "error" -> "failed"; else -> "idle" }}" else "Status: production mode",
-            style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        if (s.devConfigEnabled && url.isEmpty()) Text("Enter a config URL to fully isolate testing from production config.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (s.devConfigEnabled && vm.devStatus == "loaded") Text("Last loaded: $url", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        vm.devError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-    }
-}
+
 
 @Composable
 private fun FontSheet(vm: MainViewModel, s: Settings, error: String?, importing: Boolean, onImport: () -> Unit, onDismiss: () -> Unit) = OrionSheet(onDismiss) {

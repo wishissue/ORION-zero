@@ -1,9 +1,7 @@
 package com.orion.store
 
 import com.orion.store.data.*
-import com.orion.store.ui.bundleIssueBody
 import com.orion.store.ui.cleanPermName
-import com.orion.store.ui.isProfane
 import com.orion.store.ui.webSettingsImport
 
 import org.junit.Assert.*
@@ -49,11 +47,6 @@ class LogicTest {
         val u = submissionIssueUrl("[]", 2, "Foo", "1.5.5")
         assertTrue(u.startsWith("https://github.com/RookieEnough/Orion-Data/issues/new?title="))
         assertTrue(enc("App Submission [2 Apps] - Foo") in u)
-        val body = bundleIssueBody("T", "D", "fa-bolt", "c", listOf("a", "zz"), listOf(AppItem(id = "a", name = "A", packageName = "p.a")), null)
-        assertTrue("- **A** (`a`) · `p.a`" in body)
-        assertTrue("- zz" in body)
-        assertFalse("Submitted by" in body)
-        assertFalse("\n\n" in body)
     }
 
     @Test fun categories() {
@@ -123,19 +116,9 @@ class LogicTest {
         assertEquals("com.lagradost.cloudstream3", c[0]); assertEquals("x.y", packageCandidates(cs, "x.y").first())
     }
 
-    @Test fun aiAnswers() {
-        val a = com.orion.store.platform.OrionAi.parse("<think>hmm</think>Try Metrolist [3] or ViMusic [7, 9]. **Both** are free.")
-        assertEquals("Try Metrolist or ViMusic. Both are free.", a.reply); assertEquals(listOf(3, 7, 9), a.picks)
-        val apps = listOf(AppItem(id = "m", name = "Metrolist", category = "Music", description = "YouTube Music client"), AppItem(id = "k", name = "Keyboard", category = "Tools"))
-        assertEquals(listOf(0), com.orion.store.platform.OrionAi.matches(apps, "I want to listen to songs for free", 5))
-        assertTrue(com.orion.store.platform.OrionAi.matches(apps, "hey whats orion", 5).isEmpty())
-    }
-
     @Test fun misc() {
         assertEquals(1, Xp.level(60)); assertEquals(2, Xp.level(61)); assertEquals(10, Xp.level(1185)); assertEquals(9, Xp.level(1184))
         assertEquals(30, Xp.level(14355)); assertEquals(50, Xp.level(55125)); assertEquals(Xp.start(50), 55125L)
-        assertTrue(isProfane("b4d guy", listOf("bad")))
-        assertFalse(isProfane("good", listOf("bad")))
         assertEquals("FINE LOCATION", cleanPermName("android.permission.ACCESS_FINE_LOCATION"))
     }
 }

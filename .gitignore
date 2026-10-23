@@ -9,6 +9,9 @@ keystore.properties
 *.keystore
 /app/release/
 /shots-readme/
+/output/
+/outupt/
+*.patch
 .idea/
 *.iml
 

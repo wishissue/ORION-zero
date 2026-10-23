@@ -165,7 +165,7 @@ class DownloadService : Service() {
         val launch = packageManager.getLaunchIntentForPackage(packageName)?.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(if (count > 1) "$count downloads in progress" else "Downloading…")
-            .setContentText(if (avg in 1..99) "$avg% · Orion Store will keep going in the background" else "Orion Store will keep going in the background")
+            .setContentText(if (avg in 1..99) "$avg% · Orion Zero will keep going in the background" else "Orion Zero will keep going in the background")
             .setOnlyAlertOnce(true).setOngoing(true).setSilent(true).setCategory(NotificationCompat.CATEGORY_PROGRESS).setPriority(NotificationCompat.PRIORITY_LOW)
             .setProgress(100, avg.coerceIn(0, 100), avg <= 0)
             .apply { launch?.let { setContentIntent(PendingIntent.getActivity(this@DownloadService, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)) } }

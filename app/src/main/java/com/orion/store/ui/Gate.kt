@@ -181,8 +181,6 @@ private fun DevPanel(vm: MainViewModel, status: String, progress: Float, text: S
 
 @Composable
 fun Maintenance(vm: MainViewModel) {
-    var game by remember { mutableStateOf(false) }; var donate by remember { mutableStateOf(false) }
-    var taps by remember { mutableIntStateOf(0) }; var last by remember { mutableLongStateOf(0L) }; var dev by remember { mutableStateOf(false) }
     val socials = vm.config?.socials ?: Defaults.DEV_SOCIALS
     val cs = MaterialTheme.colorScheme; val ty = MaterialTheme.typography; val still = LocalS.current.disableAnimations
     val inf = rememberInfiniteTransition(label = "bg")
@@ -190,7 +188,7 @@ fun Maintenance(vm: MainViewModel) {
     // A slow breathing fill instead of the indeterminate sweep, which reads as frantic on a page meant to calm
     val fill by inf.animateFloat(.35f, if (still) .35f else .85f, infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "fill")
     var k by remember { mutableIntStateOf(0) }
-    LaunchedEffect(still) { while (!still) { delay(2600); if (!game) k++ } }
+    LaunchedEffect(still) { while (!still) { delay(2600); k++ } }
     Box(Modifier.fillMaxSize().background(cs.surface)) {
         Box(Modifier.align(Alignment.TopStart).offset((-90).dp, (-70).dp).size(280.dp).graphicsLayer { rotationZ = spin }
             .clip(MaterialShapes.SoftBurst.toShape()).background(cs.primaryContainer.copy(.5f)))
@@ -201,14 +199,8 @@ fun Maintenance(vm: MainViewModel) {
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 val size = minOf(maxHeight - 40.dp, 176.dp)
                 if (size >= 96.dp) Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    MorphBlob(listOf(MaterialShapes.Cookie12Sided, MaterialShapes.Sunny, MaterialShapes.Cookie9Sided, MaterialShapes.SoftBurst), k, size, cs.primaryContainer,
-                        Modifier.springClick(CircleShape) { vm.haptic(H.SELECTION); game = true }) {
-                        DinoCirclePreview(size * .6f, paused = game, Modifier.clip(CircleShape).background(cs.surfaceContainerLowest))
-                    }
-                    Surface(onClick = { vm.haptic(H.SELECTION); game = true }, modifier = Modifier.padding(top = 10.dp), shape = Pill, color = cs.tertiary, contentColor = cs.onTertiary) {
-                        Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Sym.SportsEsports, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Tap to play", style = ty.labelLargeEmphasized)
-                        }
+                    MorphBlob(listOf(MaterialShapes.Cookie12Sided, MaterialShapes.Sunny, MaterialShapes.Cookie9Sided, MaterialShapes.SoftBurst), k, size, cs.primaryContainer, Modifier) {
+                        Icon(Sym.Construction, null, Modifier.size(size * .4f), tint = cs.onPrimaryContainer)
                     }
                 }
             }
@@ -232,21 +224,9 @@ fun Maintenance(vm: MainViewModel) {
                     }
                     LinearWavyProgressIndicator({ fill }, Modifier.fillMaxWidth(), waveSpeed = 6.dp)
                 }
-                CtaButton("Support development", { vm.haptic(H.SELECTION); donate = true }, icon = Sym.Favorite)
                 if (socials.discord.isNotEmpty()) CtaButton("Join the community", { vm.haptic(H.SELECTION); vm.tracker.open(socials.discord) }, icon = Sym.BrandDiscord, tonal = true)
-                AnimatedVisibility(dev) {
-                    OutlinedButton({ vm.bypassMaintenance = true; vm.haptic(H.SUCCESS) }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
-                        Icon(Sym.Terminal, null); Spacer(Modifier.width(8.dp)); Text("Developer bypass")
-                    }
-                }
             }
-            Text("Orion Store · $STORE_VERSION", Modifier.padding(top = 8.dp).clip(CircleShape).clickable(indication = null, interactionSource = null) {
-                val now = System.currentTimeMillis()
-                if (now - last < 500) { taps++; if (taps == 7) { dev = true; vm.haptic(H.SUCCESS) } else if (taps > 3) vm.haptic(H.SELECTION) } else taps = 1
-                last = now
-            }.padding(8.dp), style = ty.labelSmall, color = cs.onSurfaceVariant)
+            Text("Orion Zero · $STORE_VERSION", Modifier.padding(top = 8.dp).padding(8.dp), style = ty.labelSmall, color = cs.onSurfaceVariant)
         }
     }
-    if (game) DinoGameSheet(vm) { game = false }
-    if (donate) DonationSheet(vm, vm.config?.donation ?: Defaults.DONATION) { donate = false }
 }

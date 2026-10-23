@@ -252,12 +252,6 @@ private val UI_STEPS = listOf(
     Step(Sym.Palette, "Go to Interface", "Find the Interface section in settings"),
     Step(Sym.ToggleOn, "Enable Modern UI", "Toggle on \"Modern UI\" to unlock the new layout"),
 )
-private val TOUR_STEPS = listOf(
-    Step(Sym.Terminal, "Developer Menu", "Tap the Dev tab to see what's new under the hood."),
-    Step(Sym.VolunteerActivism, "Support Orion", "We've added new ways to donate. Check them out!"),
-    Step(Sym.Favorite, "Thank You!", "You can now support Orion via Ko-fi, UPI, or PayPal."),
-)
-
 /** Hero moment: the container morphs to a new MaterialShape and turns a quarter on every step. */
 @Composable
 private fun StepHero(steps: List<Step>, i: Int, dots: IntRange?) {
@@ -292,7 +286,7 @@ private fun StepHero(steps: List<Step>, i: Int, dots: IntRange?) {
 }
 
 @Composable
-fun TutorialSheet(vm: MainViewModel, onDismiss: () -> Unit) = if (vm.tour) TourSheet(vm, onDismiss) else ModernUiSheet(vm, onDismiss)
+fun TutorialSheet(vm: MainViewModel, onDismiss: () -> Unit) = ModernUiSheet(vm, onDismiss)
 
 @Composable
 private fun ModernUiSheet(vm: MainViewModel, onDismiss: () -> Unit) {
@@ -321,25 +315,6 @@ private fun ModernUiSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     TextButton(close, Modifier.fillMaxWidth()) { Text("Skip") }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun TourSheet(vm: MainViewModel, onDismiss: () -> Unit) {
-    var step by rememberSaveable { mutableIntStateOf(0) }
-    OrionSheet({ vm.setFlag("tour", "1"); onDismiss() }) {
-        val close = LocalSheetClose.current
-        StepHero(TOUR_STEPS, step, TOUR_STEPS.indices)
-        Column(Modifier.fillMaxWidth().padding(24.dp)) {
-            CtaButton(if (step == TOUR_STEPS.lastIndex) "Got it!" else "Next", {
-                vm.haptic(H.SELECTION)
-                when (step) {
-                    0 -> { vm.tab = Tab.ABOUT; step = 1 }
-                    1 -> { vm.tab = Tab.ABOUT; vm.donateOpen = true; step = 2 }
-                    else -> close()
-                }
-            }, icon = if (step == TOUR_STEPS.lastIndex) Sym.Check else Sym.ArrowForward)
         }
     }
 }
@@ -695,7 +670,6 @@ fun ChangeRequestSheet(vm: MainViewModel, app: AppItem, onDismiss: () -> Unit) =
                     }
                 }
                 CtaButton("Prepare App Update Issue", ::submit, icon = Sym.Description)
-                Text("+50 XP toward leaderboard", Modifier.fillMaxWidth(), style = ty.labelLarge, color = cs.tertiary, textAlign = TextAlign.Center)
             }
         }
     }
@@ -728,7 +702,7 @@ fun WelcomeSheet(vm: MainViewModel) = OrionSheet(vm::finishWelcome) {
                 Text("RE", Modifier.padding(horizontal = 18.dp, vertical = 4.dp), style = ty.labelLargeEmphasized, letterSpacing = 3.sp)
             }
         }
-        Text("Orion Store 2.0 · Native", Modifier.padding(top = 28.dp).reveal(0), style = ty.labelLarge, color = cs.primary)
+        Text("Orion Zero · Native", Modifier.padding(top = 28.dp).reveal(0), style = ty.labelLarge, color = cs.primary)
         Text("Native at last", Modifier.reveal(1), style = ty.displaySmallEmphasized, textAlign = TextAlign.Center)
         Text("The web app you knew has been rebuilt from the ground up as a real Android app. Same Orion, brand new engine.",
             Modifier.padding(top = 8.dp).reveal(2), style = ty.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -742,7 +716,7 @@ fun WelcomeSheet(vm: MainViewModel) = OrionSheet(vm::finishWelcome) {
         AnimatedVisibility(vm.migratedFromWeb) {
             Row(Modifier.padding(top = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.tertiaryContainer).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Sym.CheckCircle, null, tint = cs.onTertiaryContainer); Spacer(Modifier.width(12.dp))
-                Text("Your profile, badges and settings came along from the web app.", style = ty.bodyMedium, color = cs.onTertiaryContainer)
+                Text("Your settings came along from the web app.", style = ty.bodyMedium, color = cs.onTertiaryContainer)
             }
         }
         CtaButton("Let's go", close, Modifier.padding(top = 20.dp).reveal(8), icon = Sym.RocketLaunch)

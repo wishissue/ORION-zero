@@ -18,7 +18,7 @@ enum class SortOption(val label: String) {
     NAME_DESC("Name (Z-A)"), SIZE_ASC("Size (Smallest)"), SIZE_DESC("Size (Largest)")
 }
 
-enum class Tab(val platform: String?) { ANDROID(Platform.ANDROID), PC(Platform.PC), TV(Platform.TV), MYAPPS(null), ABOUT(null), UPDATES(null) }
+enum class Tab(val platform: String?) { ANDROID(Platform.ANDROID), PC(Platform.PC), TV(Platform.TV), MYAPPS(null), UPDATES(null) }
 
 val STREAMS = listOf("Stable", "Beta", "Alpha", "Nightly")
 
@@ -120,17 +120,14 @@ object Defaults {
     const val SUPPORT_EMAIL = "orionstoredev@gmail.com"
     const val EASTER_EGG = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     const val SELF_PACKAGE = "com.orion.store"
-    const val UNITY_GAME_ID = "5996387"
     val PACKAGE_SUFFIXES = listOf(".preview", ".debug", ".test", ".beta", ".canary", ".dev", ".alpha", ".nightly", ".staging", ".release")
     val FONTS = listOf(
         "spaceGrotesk" to "Space Grotesk", "inter" to "Inter", "poppins" to "Poppins", "manrope" to "Manrope", "outfit" to "Outfit",
         "dmSans" to "DM Sans", "plusJakartaSans" to "Plus Jakarta Sans", "rubik" to "Rubik", "nunitoSans" to "Nunito Sans",
         "publicSans" to "Public Sans", "systemDefault" to "System Default",
     )
-    val PTR_CHARACTERS = listOf("cat", "dog", "pokeball", "shield", "owl", "robot", "ghost", "kitty", "bunny", "batman")
     val FAQS = listOf(
-        FAQItem("Why do scanner apps say Orion has trackers?", "Scanner apps like AppManager flag the Unity Ads SDK inside Orion. That SDK exists for exactly one feature: the optional ad-watching in the About tab (Fuel the Code), where watching ads supports me and earns you XP and unlocks badges. No analytics, no data mining, no data selling. The app is open source so anyone can verify it, and ads are 100% optional with nothing running in the background.", "fa-magnifying-glass"),
-        FAQItem("Is Orion Store safe?", "Absolutely. Orion Store is completely open-source. This means our code is public on GitHub for anyone to audit. We believe in transparency: no hidden trackers, no data mining, just a clean gateway to apps.", "fa-shield-cat"),
+        FAQItem("Is Orion Zero safe?", "Absolutely. Orion Zero is completely open-source. This means our code is public on GitHub for anyone to audit. We believe in transparency: no hidden trackers, no data mining, just a clean gateway to apps.", "fa-shield-cat"),
         FAQItem("Are apps on Orion safe?", "Yes. I personally review and mod them using tools available on their official repositories to ensure they are safe, functional, and privacy-respecting before they land here.", "fa-check-double"),
         FAQItem("Are ReVanced builds safe?", "Yes. These builds are automated via GitHub Actions bots, not manually patched. They use the official ReVanced CLI and patches on APKs sourced from APKMirror, Uptodown, and APKPure. The process runs daily at 6 AM. The entire build pipeline is transparent and open-source: https://github.com/RookieEnough/Revanced-AutoBuilds", "fa-robot"),
         FAQItem("Installation failed?", "If you see 'App not installed' or 'Package conflicts', it's likely a signature mismatch. You cannot install a modded app over the original Play Store version or a different mod. Uninstall the existing app first, then install the one from Orion.", "fa-file-signature"),

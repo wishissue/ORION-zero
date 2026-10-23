@@ -29,8 +29,8 @@ import kotlin.math.max
 @Serializable data class ForcedSnapshot(val schemaVersion: Int = 1, val targetVersion: String, val downloadFileName: String, val status: String, val downloadCompleted: Boolean, val exported: Boolean)
 
 @Serializable data class Settings(
-    val theme: String = "light",
-    val palette: String = "orion",
+    val theme: String = "dark",
+    val palette: String = "mono",
     val appFont: String = "spaceGrotesk",
     val customFonts: List<CustomFont> = emptyList(),
     val customPalettes: List<CustomPalette> = emptyList(),
@@ -71,7 +71,6 @@ import kotlin.math.max
     val showAppAbout: Boolean = false,
     val bottomNavScale: Float = .85f,
     val highRefreshRate: Boolean = true,
-    val pullToRefreshCharacter: String = "cat",
     val hapticEnabled: Boolean = true,
     val glassEffect: Boolean = true,
     val isDevUnlocked: Boolean = false,
@@ -112,16 +111,6 @@ import kotlin.math.max
     val seenFlags: Set<String> = emptySet(),
     val devConfigEnabled: Boolean = false,
     val devConfigUrl: String = "",
-    /** Orion AI: the button on store tabs, chat sounds, and the provider in use. Keys stay on this device and only go to their own provider. */
-    val aiButton: Boolean = true,
-    val aiSounds: Boolean = true,
-    val aiProvider: String = "gemini",
-    val aiKeys: Map<String, String> = emptyMap(),
-    val aiModels: Map<String, String> = emptyMap(),
-    val aiBaseUrl: String = "",
-    /** The on-device model in use, and where the user dragged the AI star (fractions of the screen, -1 = default spot). */
-    val aiLocalModel: String = "",
-    val aiFabX: Float = -1f, val aiFabY: Float = -1f,
     @Transient val coinFlipHintCount: Int = 0,
 ) {
     fun toggleHiddenTab(tab: String): Settings {
@@ -133,7 +122,6 @@ import kotlin.math.max
     fun streamOf(id: String) = if (stableOnly) "Stable" else appStreams[id] ?: "Stable"
     fun hideInstaller(pkg: String) = if (pkg in hiddenInstallers) this else copy(hiddenInstallers = hiddenInstallers + pkg)
     fun incrementCoinFlipHint() = copy(coinFlipHintCount = minOf(3, coinFlipHintCount + 1))
-    fun withPtrCharacter(c: String) = copy(pullToRefreshCharacter = if (c == "pikachu") "pokeball" else c)
     fun withDevUnlocked(v: Boolean) = copy(isDevUnlocked = v, localMaintenanceMode = if (v) localMaintenanceMode else false)
     /** Null when an ad may pay out now, else the user-facing reason it can't. */
     fun adBlockReason(now: Long): String? {

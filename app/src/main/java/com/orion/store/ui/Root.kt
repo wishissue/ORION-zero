@@ -56,7 +56,6 @@ private data class NavItem(val tab: Tab, val icon: ImageVector, val selected: Im
 private val NAV = listOf(
     NavItem(Tab.ANDROID, Sym.Android, Sym.AndroidFilled, "Apps", "apps"), NavItem(Tab.PC, Sym.DesktopWindows, Sym.DesktopWindowsFilled, "PC", "PC"),
     NavItem(Tab.TV, Sym.Tv, Sym.TvFilled, "TV", "TV"), NavItem(Tab.MYAPPS, Sym.GridView, Sym.GridViewFilled, "My Apps", "my"),
-    NavItem(Tab.ABOUT, Sym.Code, Sym.CodeFilled, "Dev", "About Orion"),
 )
 
 @Composable
@@ -84,7 +83,7 @@ fun OrionRoot(vm: MainViewModel) {
 @Composable
 private fun Home(vm: MainViewModel) {
     val s = LocalS.current; val d = LocalD.current
-    val items = NAV.filter { it.tab == Tab.ABOUT || it.tab.name.lowercase() !in s.hiddenTabs }
+    val items = NAV.filter { it.tab.name.lowercase() !in s.hiddenTabs }
     val wide = LocalConfiguration.current.screenWidthDp >= 600
     val density = LocalDensity.current
     val navDensity = Density(density.density * s.bottomNavScale.coerceIn(.8f, 1.2f), density.fontScale)
@@ -102,7 +101,6 @@ private fun Home(vm: MainViewModel) {
         if (wide) CompositionLocalProvider(LocalDensity provides navDensity) {
             NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceContainer, header = {
                 Spacer(Modifier.height(12.dp))
-                if (s.aiButton) AiStarFace(vm, Modifier.padding(vertical = 8.dp))
             }) {
                 Spacer(Modifier.weight(1f))
                 items.forEach { n -> NavigationRailItem(vm.tab == n.tab, { vm.navTo(n.tab) }, { NavIcon(n, vm.tab == n.tab, updateCount) }, label = { Text(n.label) }) }
@@ -136,7 +134,6 @@ private fun Home(vm: MainViewModel) {
                     saved.SaveableStateProvider(t.name) {
                         when (t) {
                             Tab.MYAPPS -> MyAppsTab(vm, inner)
-                            Tab.ABOUT -> AboutTab(vm, inner)
                             else -> StoreTab(vm, t.platform ?: Platform.ANDROID, inner)
                         }
                     }
@@ -145,41 +142,8 @@ private fun Home(vm: MainViewModel) {
             if (!wide) CompositionLocalProvider(LocalDensity provides navDensity) {
                 FloatingNav(vm, items, updateCount, vm.navShown, Modifier.align(Alignment.BottomCenter))
             }
-            if (!wide && s.aiButton) AiStar(vm)
         }
     }
-}
-
-/** Orion AI's entry point: a small translucent star on a slowly turning cookie. Drag it anywhere; the spot is saved as a fraction
- *  of the screen so it survives rotation. The rail gets the same star, fixed in place. */
-@Composable
-private fun AiStarFace(vm: MainViewModel, modifier: Modifier = Modifier, lifted: Boolean = false) {
-    val cs = MaterialTheme.colorScheme; val still = LocalS.current.disableAnimations
-    val spin by rememberInfiniteTransition(label = "star").animateFloat(0f, if (still) 0f else 360f, infiniteRepeatable(tween(14_000, easing = androidx.compose.animation.core.LinearEasing)), label = "spin")
-    val k by animateFloatAsState(if (lifted) 1.18f else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "lift")
-    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    Box(modifier.size(44.dp).graphicsLayer { scaleX = k; scaleY = k }.focusRing(src, CircleShape).clip(CircleShape)
-        .clickable(src, ripple()) { vm.haptic(H.MEDIUM); vm.open(Overlay.AI) }, contentAlignment = Alignment.Center) {
-        Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }.clip(MaterialShapes.Cookie9Sided.toShape()).background(cs.primaryContainer.copy(alpha = .6f)))
-        Icon(Sym.AutoAwesome, "Orion AI", Modifier.size(22.dp), tint = cs.onPrimaryContainer)
-    }
-}
-
-@Composable
-private fun BoxScope.AiStar(vm: MainViewModel) = BoxWithConstraints(Modifier.matchParentSize()) {
-    val s = LocalS.current; val d = LocalDensity.current
-    val size = with(d) { 44.dp.toPx() }; val m = with(d) { 12.dp.toPx() }
-    val spanX = (constraints.maxWidth - size - 2 * m).coerceAtLeast(1f); val spanY = (constraints.maxHeight - size - 2 * m).coerceAtLeast(1f)
-    // Default spot: right edge, just above the dock
-    var x by remember { mutableFloatStateOf(s.aiFabX.takeIf { it >= 0f } ?: 1f) }; var y by remember { mutableFloatStateOf(s.aiFabY.takeIf { it >= 0f } ?: .84f) }
-    var dragging by remember { mutableStateOf(false) }
-    AiStarFace(vm, Modifier.offset { androidx.compose.ui.unit.IntOffset((m + x * spanX).toInt(), (m + y * spanY).toInt()) }
-        .pointerInput(spanX, spanY) {
-            detectDragGestures(onDragStart = { dragging = true; vm.haptic(H.LIGHT) }, onDragCancel = { dragging = false },
-                onDragEnd = { dragging = false; vm.set { it.copy(aiFabX = x, aiFabY = y) } }) { c, delta ->
-                c.consume(); x = (x + delta.x / spanX).coerceIn(0f, 1f); y = (y + delta.y / spanY).coerceIn(0f, 1f)
-            }
-        }, dragging)
 }
 
 /** Floating pill dock: the active destination grows into an icon + label indicator; slides away while scrolling down. */
@@ -222,15 +186,12 @@ fun Header(vm: MainViewModel) {
     val subtitle = NAV.firstOrNull { it.tab == vm.tab }?.subtitle ?: ""
     Row(Modifier.fillMaxWidth().height(64.dp).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
-            if (vm.tab == Tab.ABOUT) Row(verticalAlignment = Alignment.CenterVertically) {
-                Logo(vm); Spacer(Modifier.width(12.dp)); Text(subtitle, style = MaterialTheme.typography.titleLargeEmphasized)
-            } else SearchPill(vm, subtitle)
+            SearchPill(vm, subtitle)
         }
         AnimatedVisibility(vm.storeUpdateAvailable) {
             FilledTonalIconButton({ vm.fBypassed = false; vm.loadApps(true) }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.SystemUpdate, "Store update") }
         }
         if (Device.isTv) TvBetaPill(vm)
-        if (vm.tab == Tab.ABOUT) IconButton({ vm.haptic(H.LIGHT); vm.open(Overlay.GUIDE) }) { Icon(Sym.MenuBook, "Know Orion") }
         val dl = d.activeDownloads.size; val up = vm.updates.size
         IconButton({ vm.openSettings() }) {
             BadgedBox({
@@ -240,13 +201,6 @@ fun Header(vm: MainViewModel) {
                     vm.storeUpdateAvailable -> Badge { Text("!") }
                 }
             }) { Icon(Sym.Settings, "Settings") }
-        }
-        val p = s.userProfile
-        IconButton(vm::openProfileStats) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
-                if (!p?.avatarUrl.isNullOrEmpty()) AsyncImage(pngAvatar(p.avatarUrl), "Profile", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                else Text(p?.name?.firstOrNull()?.uppercase() ?: "U", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = cs.onSecondaryContainer)
-            }
         }
     }
 }
@@ -269,11 +223,19 @@ private fun TvBetaPill(vm: MainViewModel) {
 
 private const val TV_BUG_URL = "https://github.com/RookieEnough/Orion-Store/issues/new?title=%5BTV%20beta%5D%20&body=TV%20model%3A%20%0AAndroid%20TV%20version%3A%20%0AWhat%20happened%3A%20"
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Logo(vm: MainViewModel) {
     val cs = MaterialTheme.colorScheme
-    Box(Modifier.size(40.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(cs.primary).clickable(onClick = vm::titleClick), contentAlignment = Alignment.Center) {
-        Icon(painterResource(R.drawable.ic_splash_logo), "Orion Store", Modifier.size(40.dp), tint = cs.onPrimary)
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(MaterialShapes.Cookie9Sided.toShape())
+            .background(cs.primary)
+            .clickable { if (vm.canResetBrowse()) vm.restoreBrowse() else vm.navTo(vm.homeTab) },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(painterResource(R.drawable.ic_splash_logo), "Orion Zero", Modifier.size(40.dp), tint = cs.onPrimary)
     }
 }
 
@@ -285,6 +247,7 @@ private fun SearchPill(vm: MainViewModel, scope: String) {
     val q = if (lib) vm.libraryQuery else LocalD.current.tab(vm.tab.key()).query
     val set: (String) -> Unit = { if (lib) vm.libraryQuery = it else vm.search(it) }
     Row(Modifier.fillMaxWidth().height(52.dp).clip(Pill).background(cs.surfaceContainerHigh).padding(start = 6.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        
         Logo(vm)
         BasicTextField(q, set, Modifier.weight(1f).padding(horizontal = 12.dp), singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface), cursorBrush = SolidColor(cs.primary),
@@ -352,10 +315,6 @@ private fun Overlays(vm: MainViewModel) {
     var lastApp by remember { mutableStateOf<AppItem?>(null) }
     vm.selectedApp?.let { lastApp = it }
     val sp = MaterialTheme.motionScheme.defaultSpatialSpec<Float>(); val fx = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-    // Under the app page, so an app opened from the chat lands on top and backing out returns to the conversation
-    AnimatedVisibility(Overlay.AI in vm.overlays, enter = slideInVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 5 } + fadeIn(), exit = slideOutVertically { it / 5 } + fadeOut()) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) { AiScreen(vm) { vm.close(Overlay.AI) } }
-    }
     AnimatedVisibility(vm.selectedApp != null, enter = fadeIn(fx) + scaleIn(sp, .92f), exit = fadeOut(fx) + scaleOut(targetScale = .94f)) {
         val r by transition.animateDp(label = "r") { if (it == EnterExitState.Visible) 0.dp else 48.dp }
         BackHandler { vm.selectedApp = null }
@@ -366,17 +325,10 @@ private fun Overlays(vm: MainViewModel) {
     AnimatedVisibility(Overlay.SETTINGS in vm.overlays, enter = slideInHorizontally { it / 3 } + fadeIn(), exit = slideOutHorizontally { it / 3 } + fadeOut()) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) { SettingsScreen(vm) }
     }
-    AnimatedVisibility(Overlay.GUIDE in vm.overlays, enter = slideInVertically { it / 4 } + fadeIn(), exit = slideOutVertically { it / 4 } + fadeOut()) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) { KnowOrionScreen(vm) { vm.close(Overlay.GUIDE) } }
-    }
     fun o(x: Overlay) = x in vm.overlays
     if (o(Overlay.RELEASE_NOTES)) ReleaseNotesSheet(vm) { vm.close(Overlay.RELEASE_NOTES) }
     if (o(Overlay.FAQ)) FaqSheet(vm) { vm.close(Overlay.FAQ) }
-    if (o(Overlay.SUBMISSION)) SubmissionSheet(vm) { vm.close(Overlay.SUBMISSION) }
-    if (o(Overlay.AD_DONATION)) AdDonationSheet(vm) { vm.close(Overlay.AD_DONATION) }
     if (vm.welcomeOpen) WelcomeSheet(vm)
-    if (o(Overlay.CUSTOM_BUNDLE)) CustomBundleSheet(vm) { vm.close(Overlay.CUSTOM_BUNDLE) }
-    if (o(Overlay.PROFILE_STATS)) ProfileStatsSheet(vm) { vm.close(Overlay.PROFILE_STATS) }
     if (o(Overlay.NOTICE)) NoticeSheet(vm) { vm.dismissNotice() }
     if (o(Overlay.TUTORIAL)) TutorialSheet(vm) { vm.close(Overlay.TUTORIAL) }
     // The bundle stays selected while one of its apps is open, so backing out of the detail page lands on the bundle again.
@@ -384,20 +336,6 @@ private fun Overlays(vm: MainViewModel) {
     vm.vtTarget?.let { VirusTotalSheet(vm, it) { vm.vtTarget = null } }
     if (vm.changeRequest) vm.selectedApp?.let { ChangeRequestSheet(vm, it) { vm.changeRequest = false } }
     vm.autoReport?.let { log -> AutoReportDialog(vm, log) }
-    if (vm.guidePrompt) GuidePromptDialog(vm)
-}
-
-/** One-time hello for 2.2.0: points everyone at Know Orion. */
-@Composable
-private fun GuidePromptDialog(vm: MainViewModel) {
-    val cs = MaterialTheme.colorScheme
-    fun done(open: Boolean) { vm.guidePrompt = false; vm.setFlag("guide", STORE_VERSION); if (open) { vm.haptic(H.SUCCESS); vm.open(Overlay.GUIDE) } }
-    AlertDialog({ done(false) },
-        icon = { MorphBlob(listOf(MaterialShapes.Cookie9Sided, MaterialShapes.Sunny), 0, 64.dp, cs.primaryContainer) { Icon(Sym.MenuBook, null, Modifier.size(30.dp), tint = cs.onPrimaryContainer) } },
-        title = { Text("Get to know Orion", style = MaterialTheme.typography.headlineSmallEmphasized) },
-        text = { Text("Every feature now lives in one field guide: backups, compact mode, XP and badges, the Hall of Fame, the Dino run and the rest. You can always find it on the Dev tab.") },
-        confirmButton = { Button({ done(true) }, shapes = ButtonDefaults.shapes()) { Text("Show me") } },
-        dismissButton = { TextButton({ done(false) }) { Text("Later") } })
 }
 
 /** Shown on the first start after a background pass that hit a problem. Failed updates stay ready to install with one tap. */

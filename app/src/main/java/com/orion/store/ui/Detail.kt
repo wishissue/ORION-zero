@@ -92,7 +92,7 @@ fun DetailScreen(vm: MainViewModel, base: AppItem) {
 
     var target by remember(app.id) { mutableStateOf<VersionOption?>(null) }
     var versions by remember { mutableStateOf(false) }; var variants by remember { mutableStateOf(false) }
-    var microG by remember { mutableStateOf(false) }; var shareSheet by remember { mutableStateOf(false) }
+    var microG by remember { mutableStateOf(false) }
     var ignoreMenu by remember { mutableStateOf(false) }; var lightbox by remember { mutableStateOf<Int?>(null) }
     var cleanupPrompt by remember(app.id) { mutableStateOf(cleanup != null) }; var handled by remember(app.id) { mutableStateOf(false) }
     var cleaning by remember { mutableStateOf(false) }; var more by remember { mutableStateOf(false) }
@@ -148,13 +148,12 @@ fun DetailScreen(vm: MainViewModel, base: AppItem) {
                     IconToggleButton(fav, { vm.haptic(H.HEAVY); vm.upd { it.toggleFavorite(app.id) } }) {
                         Icon(if (fav) Sym.Favorite else Sym.FavoriteBorder, "Favorite", tint = if (fav) cs.primary else LocalContentColor.current)
                     }
-                    IconButton({ vm.haptic(H.SELECTION); vm.tracker.share(app.name, "Check out ${app.name} on Orion Store!", Share.webLink(app.id, app.icon)) }) { Icon(Sym.Share, "Share") }
+                    IconButton({ vm.haptic(H.SELECTION); vm.tracker.share(app.name, "Check out ${app.name} on Orion Zero!", Share.webLink(app.id, app.icon)) }) { Icon(Sym.Share, "Share") }
                     Box {
                         IconButton({ more = true }) { Icon(Sym.MoreVert, "More options") }
                         DropdownMenu(more, { more = false }, shape = RoundedCornerShape(20.dp)) {
                             DropdownMenuItem({ Text("Request app change") }, { more = false; vm.haptic(H.LIGHT); vm.changeRequest = true }, leadingIcon = { Icon(Sym.EditNote, null) })
                             DropdownMenuItem({ Text("Report an issue") }, { more = false; vm.haptic(H.LIGHT); report() }, leadingIcon = { Icon(Sym.Flag, null) })
-                            if (s.isDevUnlocked) DropdownMenuItem({ Text("Developer deep links") }, { more = false; vm.haptic(H.SELECTION); shareSheet = true }, leadingIcon = { Icon(Sym.Link, null) })
                         }
                     }
                 },
@@ -409,7 +408,6 @@ fun DetailScreen(vm: MainViewModel, base: AppItem) {
             })
         })
 
-    if (shareSheet) ShareLinksSheet(vm, app) { shareSheet = false }
     lightbox?.let { Lightbox(app.screenshots, it) { lightbox = null } }
 }
 
@@ -461,44 +459,4 @@ fun Lightbox(shots: List<String>, start: Int, onClose: () -> Unit) = Dialog(onCl
     }
 }
 
-@Composable
-private fun ShareLinksSheet(vm: MainViewModel, app: AppItem, onDismiss: () -> Unit) = OrionSheet(onDismiss) {
-    val clip = LocalClipboardManager.current; val cs = MaterialTheme.colorScheme
-    var open by remember { mutableStateOf<String?>(null) }; var copied by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(copied) { if (copied != null) { delay(2000); copied = null } }
-    val web = Share.webLink(app.id, app.icon)
-    data class Row5(val key: String, val label: String, val helper: String, val value: String, val action: String, val multi: Boolean)
-    val rows = listOf(
-        Row5("deep", "Deep Link", "Launches Orion Store directly to this app", Share.deepLink(app.id), "Copy", false),
-        Row5("web", "Web Link", "Uses the fallback redirect page before opening the app", web, "Copy", false),
-        Row5("md", "Markdown Badge", "Badge snippet for markdown readmes and posts", Share.markdown(web), "Copy Markdown", true),
-        Row5("html", "HTML Badge", "Badge snippet for websites and embedded pages", Share.html(web), "Copy HTML", true),
-    )
-    SheetTitle("Developer deep links", Sym.Link)
-    Text(buildAnnotatedString { append("Open one item at a time to copy links and badge snippets for "); withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(app.name) }; append(".") },
-        Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-    Column(Modifier.navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-        rows.forEachIndexed { i, r ->
-            val on = open == r.key
-            Surface(shape = ListItemDefaults.segmentedShapes(i, rows.size).shape, color = cs.surfaceContainerHigh) {
-                Column {
-                    ListItem({ Text(r.label, fontWeight = FontWeight.Bold) }, Modifier.clickable { open = if (on) null else r.key; vm.haptic(H.SELECTION) },
-                        supportingContent = { Text(r.helper) }, trailingContent = { Icon(if (on) Sym.ExpandLess else Sym.ExpandMore, null) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent))
-                    AnimatedVisibility(on) {
-                        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                            SelectionContainer {
-                                Text(r.value, Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerLowest).padding(12.dp),
-                                    style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, maxLines = if (r.multi) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            FilledTonalButton({ clip.setText(AnnotatedString(r.value)); copied = r.key; vm.haptic(H.SUCCESS) }, modifier = Modifier.padding(top = 10.dp), shapes = ButtonDefaults.shapes()) {
-                                Icon(if (copied == r.key) Sym.Check else Sym.ContentCopy, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                Text(if (copied == r.key) "Copied" else r.action)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+

@@ -59,12 +59,12 @@ private val HAPTICS = mapOf(
     H.SUCCESS to (longArrayOf(0, 35, 65, 21) to intArrayOf(0, 250, 0, 180)), H.WARNING to (longArrayOf(0, 30, 40, 30) to intArrayOf(0, 255, 0, 255)),
     H.ERROR to (longArrayOf(0, 27, 45, 50) to intArrayOf(0, 120, 0, 250)),
 )
-enum class Overlay { SETTINGS, RELEASE_NOTES, FAQ, SUBMISSION, AD_DONATION, CUSTOM_BUNDLE, PROFILE_STATS, NOTICE, TUTORIAL, GUIDE, AI }
+enum class Overlay { SETTINGS, RELEASE_NOTES, FAQ, NOTICE, TUTORIAL }
 
 val FORCED_GUARD = setOf("scanning", "scan_complete", "installing", "install_failed", "export_ready", "byok_required", "ready_to_scan_or_install")
 val FORCED_TEST_PROGRESS = mapOf("checking" to 8, "downloading" to 64, "download_failed" to 32, "scanning" to 72, "installing" to 96)
 val FORCED_TEST_TEXT = mapOf(
-    "checking" to "Checking Orion Store for the newest build.", "downloading" to "Downloading OrionStore_9.9.9.apk from the update source.",
+    "checking" to "Checking Orion Zero for the newest build.", "downloading" to "Downloading OrionZero_9.9.9.apk from the update source.",
     "download_failed" to "Download interrupted. Retry the transfer or save it later.", "ready_to_scan_or_install" to "The update package is ready. Choose the next step.",
     "byok_required" to "A VirusTotal API key is required before you can scan.", "scanning" to "Scanning the APK before install.",
 )
@@ -129,7 +129,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var startupReady by mutableStateOf(false)
     // Declared before init: on a fresh install the migration callback fires synchronously from init
     var migratedFromWeb by mutableStateOf(false)
-    val ai = AiSession()
     var submissionCooldown by mutableStateOf<String?>(null)
     val snackbar = SnackbarHostState()
 
@@ -137,7 +136,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var fProgress by mutableIntStateOf(0); var fExportPath by mutableStateOf(""); var fBypassed by mutableStateOf(false)
     var fResult by mutableStateOf<VtResult?>(null); var storeUpdateAvailable by mutableStateOf(false)
     var forcedTest by mutableStateOf<String?>(null)
-    val forcedVt = VtScan(tracker, "__orion_store_self_update__", "Orion Store", app.packageName, s.virusTotalApiKey)
+    val forcedVt = VtScan(tracker, "__orion_store_self_update__", "Orion Zero", app.packageName, s.virusTotalApiKey)
     private var forcedUrl = ""; private var pendingScanAfterKey = false; private var forcedJob: Job? = null
 
     private val expectations = mutableMapOf<String, InstallExpectation>()
@@ -145,7 +144,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingRetry: Pair<AppItem, String>? = null
     private var pendingDeepLink: (() -> Unit)? = null
     private var loadGen = 0; private var syncJob: Job? = null; private var cleaning = false
-    private var devClicks = 0; private var eggClicks = 0
 
     fun allApps() = d.apps + d.importedApps
     val tabState get() = d.tab(tab.key())
@@ -264,10 +262,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // each waits until nothing else holds the screen, shows, and holds its turn until the user closes it. One at a time, never on
     // the forced update or maintenance screens, never over an open app, sheet or Settings.
     var welcomeOpen by mutableStateOf(false); var announceNow by mutableStateOf(false)
-    var tour by mutableStateOf(false); var donateOpen by mutableStateOf(false); var guidePrompt by mutableStateOf(false)
+    var donateOpen by mutableStateOf(false)
     private val turns = kotlinx.coroutines.sync.Mutex()
     private val screenFree get() = startupReady && !forcedBlocking && forcedTest == null && !((config?.maintenanceMode == true || s.localMaintenanceMode) && !bypassMaintenance) &&
-        overlays.isEmpty() && selectedApp == null && selectedBundle == null && vtTarget == null && autoReport == null && !welcomeOpen && !announceNow && !donateOpen && !guidePrompt &&
+        overlays.isEmpty() && selectedApp == null && selectedBundle == null && vtTarget == null && autoReport == null && !welcomeOpen && !announceNow && !donateOpen &&
         snackbar.currentSnackbarData == null
     // Polls every 400 ms: the gate mixes Compose state with the settings StateFlow. One boolean read, so it costs nothing
     private suspend fun untilFree() { while (!screenFree) delay(400) }
@@ -281,10 +279,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         autoReportTurn()
         withTimeoutOrNull(15_000) { while (loading || config == null) delay(300) }
         config?.notice?.takeIf { it.show && it.id != flag("notice") }?.let { takeTurn { open(Overlay.NOTICE) } }
-        if (d.apps.isNotEmpty() && !s.hasSeenModernUITutorial && s.storeLayout == "classic") takeTurn { tour = false; open(Overlay.TUTORIAL) }
-        if (d.apps.isNotEmpty() && flag("tour") == null) takeTurn { tour = true; open(Overlay.TUTORIAL) }
-        // 2.2.0 brought Know Orion: every pilot hears about it once
-        if (flag("guide") == null) takeTurn { guidePrompt = true }
+        if (d.apps.isNotEmpty() && !s.hasSeenModernUITutorial && s.storeLayout == "classic") takeTurn { open(Overlay.TUTORIAL) }
         // The megaphone lives in the store tabs' search bar, so wait for one of those to be on screen
         if (config?.announcement?.isNotBlank() == true && !announcementDismissed()) { while (tab.platform == null) delay(400); takeTurn { announceNow = true } }
     }
@@ -307,7 +302,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun onResume() {
         pendingRetry?.let { (a, f) -> if (tracker.canRequestInstalls()) { pendingRetry = null; viewModelScope.launch { delay(500); installFile(a, f) } } }
         if (installingId == null && scanningId == null) scheduleInstalledSync()
-        announceQuest(); cloudBackup(); reportAutoUpdates()
+        cloudBackup(); reportAutoUpdates()
     }
 
     /** What the background updater did while Orion was closed: a quiet toast when all went well, a report when something needs the user. */
@@ -571,25 +566,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             .setContentIntent(PendingIntent.getActivity(ctx, app.id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
     }
 
-    /** Pilots who already beat Chapter 1 hear once that Chapter 2 is out; everyone else walks into it from the sheet. */
-    private fun announceQuest() {
-        val ch = questChapter(s.adWatchCount); if (ch <= s.questChapterSeen) return
-        set { it.copy(questChapterSeen = ch) }
-        val nm = NotificationManagerCompat.from(ctx)
-        if (!nm.areNotificationsEnabled()) { queue { toast("New mission: Chapter 2 · The Forkening", 8000, "Play") { open(Overlay.AD_DONATION) } }; return }
-        nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_quest", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Fuel the Code missions").build())
-        val i = Intent(ctx, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("open", "quest")
-        runCatching {
-            nm.notify(7320, NotificationCompat.Builder(ctx, "orion_quest").setSmallIcon(com.orion.store.R.drawable.ic_launcher_monochrome)
-                .setContentTitle("New mission unlocked: The Forkening").setAutoCancel(true)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("Entropy's last breath split Orion into a thousand rogue forks. Chapter 2 of Fuel the Code is live, with three new bosses and three new badges."))
-                .setContentText("Chapter 2 of Fuel the Code is live.")
-                .setContentIntent(PendingIntent.getActivity(ctx, 7320, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
-        }
-    }
-
     fun onNotificationIntent(i: Intent?) {
-        if (i?.getStringExtra("open") == "quest") { i.removeExtra("open"); open(Overlay.AD_DONATION); return }
         val id = i?.getStringExtra("appId") ?: return; val file = i.getStringExtra("fileName")
         val app = allApps().firstOrNull { it.id == id } ?: return
         if (file != null && id !in d.pendingCleanup) upd { it.copy(readyToInstall = it.readyToInstall + (id to file)) }
@@ -823,7 +800,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val seg = (listOfNotNull(uri.host) + uri.pathSegments).filter { it.isNotEmpty() }
         if (seg.getOrNull(0) != "app" || seg.getOrNull(1) == null) return
         val id = Uri.decode(seg[1])
-        whenLoaded { openById(id, "not found in Orion Store") }
+        whenLoaded { openById(id, "not found in Orion Zero") }
     }
 
     /** "App details in store" from system App info. Prefers the catalog entry that installed it: forks can share a package name. */
@@ -831,39 +808,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val k = normalizePackageName(pkg)
         val id = s.packageOwners[k]?.takeIf { it in lookup }
             ?: allApps().firstOrNull { normalizePackageName(s.resolvedPackageNames[it.id] ?: it.packageName) == k }?.id
-        if (id != null) openById(id) else toast("This app isn't in Orion Store")
+        if (id != null) openById(id) else toast("This app isn't in Orion Zero")
     }
 
     private fun whenLoaded(open: () -> Unit) { if (lookup.isEmpty()) pendingDeepLink = open else open() }
 
     fun openSettings(menu: String = "none") { settingsMenu = menu; if (Overlay.SETTINGS !in overlays) overlays += Overlay.SETTINGS }
     fun open(o: Overlay) { if (o !in overlays) overlays += o }
-    fun close(o: Overlay) { overlays -= o; if (o == Overlay.PROFILE_STATS) badgeIndex = null }
+    fun close(o: Overlay) { overlays -= o }
 
-    fun navTo(t: Tab) { if (t != Tab.ABOUT && t.name.lowercase() in s.hiddenTabs) return; haptic(H.LIGHT); tab = t }
+    fun navTo(t: Tab) { if (t.name.lowercase() in s.hiddenTabs) return; haptic(H.LIGHT); tab = t }
 
     fun toggleTheme() {
         val next = when (s.theme) { "light" -> "dusk"; "dusk" -> "dark"; "dark" -> "light"; "oled" -> "light"; else -> "dark" }
         set { it.copy(theme = next, isOled = next == "oled") }; haptic(H.MEDIUM)
     }
-
-    fun titleClick() {
-        if (s.isDevUnlocked) { toast("Already a developer."); return }
-        devClicks++; val left = 7 - devClicks
-        if (left in 1..4) { toast("You are $left steps away from being a developer."); haptic(H.LIGHT) }
-        if (devClicks >= 7) { set { it.withDevUnlocked(true) }; toast("You are now a developer!"); haptic(H.SUCCESS); devClicks = 0 }
-    }
-
-    fun profileClick(view: String? = null, index: Int? = null) {
-        if (view == "badges") { profileView = "badges"; badgeIndex = index; open(Overlay.PROFILE_STATS); haptic(H.LIGHT); return }
-        badgeIndex = null
-        if (++eggClicks >= 7) {
-            // The egg only unlocks its badge: counting it as an ad watch made 7 taps worth 40 XP, endlessly.
-            tracker.open(config?.easterEggUrl ?: Defaults.EASTER_EGG); eggClicks = 0
-            set { it.copy(isLegend = true) }; haptic(H.SUCCESS)
-        } else haptic(H.LIGHT)
-    }
-    fun openProfileStats() { profileView = "profile"; badgeIndex = null; open(Overlay.PROFILE_STATS) }
 
     private fun clearExpanded() { expandedView = null; expandedApps = emptyList(); viewAllApps = null; showAllSorted = false }
     private fun tabUpd(fn: (TabViewState) -> TabViewState) { upd { it.withTab(tab.key(), fn) }; refreshVisible() }

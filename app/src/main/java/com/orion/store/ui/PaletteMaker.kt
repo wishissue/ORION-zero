@@ -199,7 +199,7 @@ fun PaletteMakerSheet(vm: MainViewModel, editing: CustomPalette?, onDismiss: () 
                 vm.haptic(H.SUCCESS); close()
             }, icon = Sym.Check)
             if (editing != null) OutlinedButton({
-                vm.set { st -> st.copy(customPalettes = st.customPalettes.filterNot { it.id == editing.id }, palette = if (st.palette == editing.id) "orion" else st.palette) }
+                vm.set { st -> st.copy(customPalettes = st.customPalettes.filterNot { it.id == editing.id }, palette = if (st.palette == editing.id) "mono" else st.palette) }
                 vm.haptic(H.WARNING); close()
             }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                 Icon(Sym.Delete, null); Spacer(Modifier.width(8.dp)); Text("Delete palette")
