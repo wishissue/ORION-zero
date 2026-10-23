@@ -112,8 +112,8 @@ tasks.register("copyApksToOutput") {
     outputs.dir(outputDirTypo)
 
     doLast {
-        val outDir = outputDir.asFile.apply { mkdirs() }
-        val outDirTypo = outputDirTypo.asFile.apply { mkdirs() }
+        val outDir = outputDir.asFile.apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+        val outDirTypo = outputDirTypo.asFile.apply { mkdirs(); listFiles()?.forEach { it.delete() } }
         apkDir.get().asFileTree.matching {
             include("**/*.apk")
         }.forEach { apkFile ->
@@ -121,10 +121,12 @@ tasks.register("copyApksToOutput") {
                 apkFile.name.contains("arm64-v8a") -> "orion-zero-arm64-v8a.apk"
                 apkFile.name.contains("armeabi-v7a") -> "orion-zero-armeabi-v7a.apk"
                 apkFile.name.contains("universal") -> "orion-zero-universal.apk"
-                else -> apkFile.name
+                else -> null
             }
-            apkFile.copyTo(File(outDir, targetName), overwrite = true)
-            apkFile.copyTo(File(outDirTypo, targetName), overwrite = true)
+            if (targetName != null) {
+                apkFile.copyTo(File(outDir, targetName), overwrite = true)
+                apkFile.copyTo(File(outDirTypo, targetName), overwrite = true)
+            }
         }
     }
 }
